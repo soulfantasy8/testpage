@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MintGarden — Profile: acevail</title>
+  <style>
+    :root{
+      --bg:#071016; --card:#0e1720; --muted:#9aa6b2; --neon:#7ef0ff; --accent:#9b5cff;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#02030a 0%,#071016 60%);color:#e6f3f7}
+    .container{max-width:980px;margin:32px auto;padding:18px}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border:1px solid rgba(126,240,255,0.06);border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(3,8,15,0.6)}
+    .header{height:200px;background-size:cover;background-position:center;position:relative}
+    .glow{position:absolute;inset:0;background:radial-gradient(600px 200px at 20% 80%,rgba(155,92,255,0.12),transparent 10%),radial-gradient(500px 150px at 80% 20%,rgba(126,240,255,0.08),transparent 10%)}
+    .profile-row{display:flex;gap:18px;padding:18px;align-items:center}
+    .avatar{width:120px;height:120px;border-radius:16px;border:3px solid rgba(255,255,255,0.06);background:#0b0f13;flex:0 0 120px;overflow:hidden}
+    .avatar img{width:100%;height:100%;object-fit:cover;display:block}
+    .meta{flex:1}
+    .name{display:flex;align-items:center;gap:8px}
+    .name h1{margin:0;font-size:20px;letter-spacing:0.2px}
+    .username{color:var(--muted);font-size:13px;margin-top:4px}
+    .bio{margin-top:12px;color:var(--muted);font-size:14px}
+    .links{display:flex;gap:10px;margin-top:14px}
+    .chip{background:rgba(255,255,255,0.02);padding:8px 10px;border-radius:999px;font-size:13px;border:1px solid rgba(255,255,255,0.03)}
+    .stats{display:flex;gap:12px;padding:14px;border-top:1px solid rgba(255,255,255,0.02);background:linear-gradient(180deg,rgba(255,255,255,0.005),transparent)}
+    .stat{flex:1;text-align:center}
+    .stat .n{font-weight:700;font-size:18px}
+    .muted{color:var(--muted);font-size:13px}
+    .verified{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:linear-gradient(90deg,rgba(126,240,255,0.04),rgba(155,92,255,0.04));border:1px solid rgba(126,240,255,0.08);font-weight:600}
+    .tag{font-size:12px;color:var(--neon);padding:3px 8px;border-radius:999px;border:1px solid rgba(126,240,255,0.12);background:linear-gradient(90deg,rgba(126,240,255,0.03),transparent)}
+    .center{display:flex;justify-content:center}
+    a {color:var(--neon);text-decoration:none}
+    .loader{padding:28px;text-align:center;color:var(--muted)}
+    .error{padding:22px;color:#ff9b9b;background:linear-gradient(180deg,rgba(255,155,155,0.02),transparent);border-top:1px solid rgba(255,155,155,0.06)}
+    @media (max-width:640px){.profile-row{flex-direction:column;align-items:flex-start}.avatar{width:96px;height:96px}.header{height:140px}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card" id="card">
+      <div id="header" class="header">
+        <div class="glow"></div>
+      </div>
+      <div class="profile-row">
+        <div class="avatar" id="avatar"><img alt="avatar" src="" /></div>
+        <div class="meta">
+          <div class="name"><h1 id="name">—</h1><div id="badge"></div></div>
+          <div class="username" id="username">—</div>
+          <div class="bio" id="bio">—</div>
+          <div class="links" id="links"></div>
+        </div>
+      </div>
+      <div class="stats" id="stats">
+        <div class="stat"><div class="n" id="owned">—</div><div class="muted">Owned</div></div>
+        <div class="stat"><div class="n" id="created">—</div><div class="muted">Created</div></div>
+        <div class="stat"><div class="n" id="collections">—</div><div class="muted">Collections</div></div>
+      </div>
+      <div id="error" class="error" style="display:none"></div>
+    </div>
+  </div>
+
+  <script>
+    // CONFIG
+    const API = 'https://api.mintgarden.io/profile/acevail';
+
+    // Helpers
+    const $ = id => document.getElementById(id);
+    const safeText = (v, fallback='—') => (v === null || v === undefined || v === '') ? fallback : v;
+
+    function setHeader(uri){
+      const el = $('header');
+      if(uri) el.style.backgroundImage = `url(${uri})`;
+      else el.style.backgroundImage = `linear-gradient(90deg, rgba(155,92,255,0.06), rgba(126,240,255,0.04))`;
+    }
+
+    function setAvatar(uri){
+      const img = $('avatar').querySelector('img');
+      if(uri) img.src = uri;
+      else img.src = '';
+    }
+
+    function makeLink(label, href){
+      const a = document.createElement('a');
+      a.href = href; a.target='_blank'; a.rel='noopener'; a.textContent = label;
+      const chip = document.createElement('div'); chip.className='chip'; chip.appendChild(a);
+      return chip;
+    }
+
+    function showError(msg){
+      const e = $('error'); e.style.display='block'; e.textContent = msg;
+    }
+
+    async function loadProfile(){
+      try{
+        const res = await fetch(API, {cache:'no-store'});
+        if(!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        // header & avatar
+        setHeader(data.header_uri);
+        setAvatar(data.avatar_uri);
+
+        // name / username
+        $('name').textContent = safeText(data.name, data.username || '—');
+        $('username').textContent = data.username ? '@'+data.username : safeText(data.encoded_id);
+
+        // badge (verification_state)
+        const badge = $('badge');
+        badge.innerHTML = '';
+        if(data.verification_state && data.verification_state > 0){
+          const v = document.createElement('div'); v.className='verified'; v.innerHTML='✔ Verified'; badge.appendChild(v);
+        } else {
+          const t = document.createElement('div'); t.className='tag'; t.textContent = 'Unverified'; badge.appendChild(t);
+        }
+
+        // bio
+        $('bio').textContent = data.bio ? data.bio : 'Пользователь ещё не указал описание.';
+
+        // links
+        const links = $('links'); links.innerHTML='';
+        if(data.website) links.appendChild(makeLink('Website', data.website));
+        if(data.twitter_handle) links.appendChild(makeLink('Twitter', `https://twitter.com/${data.twitter_handle.replace(/^@/,'')}`));
+        if(data.discord_user && data.discord_user.username){
+          const tag = document.createElement('div'); tag.className='chip'; tag.textContent = `Discord: ${data.discord_user.username}#${data.discord_user.discriminator}`; links.appendChild(tag);
+        }
+
+        // stats - show numbers or fallback
+        $('owned').textContent = safeText(data.owned_nfts_count);
+        $('created').textContent = safeText(data.created_nfts_count);
+        $('collections').textContent = safeText(data.collections_count);
+
+      } catch(err){
+        showError('Не удалось загрузить профиль: ' + err.message + '. Возможно блокировка CORS — попробуйте открыть этот файл через локальный сервер или использовать CORS-прокси.');
+        console.error(err);
+      }
+    }
+
+    // run
+    loadProfile();
+  </script>
+</body>
+</html>
